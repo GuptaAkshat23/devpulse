@@ -58,3 +58,12 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model RepoCache {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  data      Json     // stores the full repos array as JSON
+  cachedAt  DateTime @default(now())
+
+  @@index([userId])
+}
