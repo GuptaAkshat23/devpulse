@@ -53,6 +53,14 @@ export default function DashboardPage() {
           </button>
         </div>
         {loading && <div className="flex items-center justify-center py-24"><Loader2 size={24} className="animate-spin" style={{ color: 'var(--accent)' }} /></div>}
+        {!loading && error && (
+          <div
+            className="rounded-xl p-4 text-sm"
+            style={{ background: '#2a1a1a', border: '1px solid #ff444433', color: '#ff8080' }}
+          >
+            {error}
+          </div>
+        )}
         {!loading && !error && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {repos.map((repo) => (
