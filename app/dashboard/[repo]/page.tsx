@@ -3,6 +3,7 @@
 import { PRActivityChart } from '@/components/dashboard/PRActivityChart'
 import { CycleTimeChart } from '@/components/dashboard/CycleTimeChart'
 import { ContributorChart } from '@/components/dashboard/ContributorChart'
+import { AIReview } from '@/components/dashboard/AIReview'
 import { getWeeklyActivity, getCycleTimes } from '@/lib/chart-data'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
@@ -206,7 +207,7 @@ export default function RepoAnalyticsPage() {
                   No pull requests found for this repo.
                 </div>
               ) : (
-                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                <div>
                   {data.prs.map((pr) => {
                     const stateStyle = getPRStateStyle(pr.state)
                     const StateIcon = stateStyle.icon
@@ -220,39 +221,51 @@ export default function RepoAnalyticsPage() {
                       : null
 
                     return (
-                      <div key={pr.id} className="flex items-start gap-3 px-5 py-4">
-                        <StateIcon
-                          size={16}
-                          style={{ color: stateStyle.color, marginTop: 2, flexShrink: 0 }}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div
-                            className="truncate text-sm font-medium"
-                            style={{ color: 'var(--text-1)' }}
-                          >
-                            {pr.title}
+                      <div
+                        key={pr.id}
+                        className="px-5 py-4"
+                        style={{ borderBottom: '1px solid var(--border)' }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <StateIcon
+                            size={16}
+                            style={{ color: stateStyle.color, marginTop: 2, flexShrink: 0 }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div
+                              className="truncate text-sm font-medium"
+                              style={{ color: 'var(--text-1)' }}
+                            >
+                              {pr.title}
+                            </div>
+                            <div
+                              className="mono mt-1 flex items-center gap-3 text-xs"
+                              style={{ color: 'var(--text-3)' }}
+                            >
+                              <span>#{pr.number}</span>
+                              <span>{pr.author}</span>
+                              {cycleTime && <span>cycle: {cycleTime}</span>}
+                              {pr.reviews.length > 0 && (
+                                <span>{pr.reviews.length} review{pr.reviews.length !== 1 ? 's' : ''}</span>
+                              )}
+                            </div>
                           </div>
-                          <div
-                            className="mono mt-1 flex items-center gap-3 text-xs"
-                            style={{ color: 'var(--text-3)' }}
+                          <span
+                            className="mono shrink-0 rounded px-2 py-0.5 text-xs"
+                            style={{
+                              background: `${stateStyle.color}22`,
+                              color: stateStyle.color,
+                            }}
                           >
-                            <span>#{pr.number}</span>
-                            <span>{pr.author}</span>
-                            {cycleTime && <span>cycle: {cycleTime}</span>}
-                            {pr.reviews.length > 0 && (
-                              <span>{pr.reviews.length} review{pr.reviews.length !== 1 ? 's' : ''}</span>
-                            )}
-                          </div>
+                            {pr.state.toLowerCase()}
+                          </span>
                         </div>
-                        <span
-                          className="mono shrink-0 rounded px-2 py-0.5 text-xs"
-                          style={{
-                            background: `${stateStyle.color}22`,
-                            color: stateStyle.color,
-                          }}
-                        >
-                          {pr.state.toLowerCase()}
-                        </span>
+                        <AIReview
+                          owner={owner}
+                          repo={repoName}
+                          prNumber={pr.number}
+                          prTitle={pr.title}
+                        />
                       </div>
                     )
                   })}
