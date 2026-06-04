@@ -3,7 +3,8 @@ import { authOptions } from '@/lib/auth'
 import { getGitHubAccessToken } from '@/lib/get-access-token'
 import { getPRDiff, formatDiffForAI } from '@/lib/github-diff'
 import { generateText } from 'ai'
-import { openai } from '@ai-sdk/openai'
+import { createGroq } from '@ai-sdk/groq'
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     const diff = formatDiffForAI(files)
 
     const { text } = await generateText({
-      model: openai('gpt-4o'),
+      model: groq('llama-3.3-70b-versatile'),
       system: `You are an expert code reviewer. Analyze the given PR diff and respond with a JSON object in this exact format:
 {
   "summary": "2-3 sentence summary of what this PR does",
