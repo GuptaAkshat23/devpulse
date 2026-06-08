@@ -6,7 +6,7 @@ import { ContributorChart } from '@/components/dashboard/ContributorChart'
 import { AIReview } from '@/components/dashboard/AIReview'
 import { getWeeklyActivity, getCycleTimes } from '@/lib/chart-data'
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import {
   GitPullRequest,
@@ -22,6 +22,7 @@ import {
 import Link from 'next/link'
 import { PullRequest } from '@/lib/github-prs'
 import { RepoMetrics } from '@/lib/pr-metrics'
+import { Suspense } from 'react'
 
 type PRData = {
   prs: PullRequest[]
@@ -45,15 +46,17 @@ function getPRStateStyle(state: PullRequest['state']) {
   }
 }
 
-export default function RepoAnalyticsPage() {
+function RepoAnalyticsContent() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const { data: session } = useSession()
   const [data, setData] = useState<PRData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const repoName = params.repo as string
-  const owner = session?.user?.username ?? ''
+  const ownerFromUrl = searchParams.get('owner')
+  const owner = ownerFromUrl ?? session?.user?.username ?? ''
 
   useEffect(() => {
     if (!owner) return
@@ -91,7 +94,7 @@ export default function RepoAnalyticsPage() {
             {repoName}
           </h1>
           <p className="mono mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
-            PR analytics
+            {owner} · PR analytics
           </p>
         </div>
 
@@ -276,5 +279,13 @@ export default function RepoAnalyticsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function RepoAnalyticsPage() {
+  return (
+    <Suspense>
+      <RepoAnalyticsContent />
+    </Suspense>
   )
 }

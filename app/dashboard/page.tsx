@@ -2,45 +2,158 @@
 
 import { useEffect, useState } from 'react'
 import { signOut, useSession } from 'next-auth/react'
-import { GitFork, Star, Lock, Globe, Loader2 } from 'lucide-react'
+import { GitFork, Star, Lock, Globe, Loader2, ChevronDown } from 'lucide-react'
 import { GitHubRepo } from '@/lib/github-repos'
+import { GitHubOrg } from '@/lib/github-orgs'
 import Link from 'next/link'
+
+type Context = {
+  type: 'user' | 'org'
+  login: string
+  avatarUrl?: string
+}
 
 export default function DashboardPage() {
   const { data: session } = useSession()
   const [repos, setRepos] = useState<GitHubRepo[]>([])
+  const [orgs, setOrgs] = useState<GitHubOrg[]>([])
+  const [context, setContext] = useState<Context | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showOrgMenu, setShowOrgMenu] = useState(false)
 
-  const fetchRepos = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/repos')
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setRepos(data.repos)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load repos')
-    } finally {
-      setLoading(false)
+  // Set default context once session loads
+  useEffect(() => {
+    if (session?.user?.username && !context) {
+      setContext({ type: 'user', login: session.user.username })
     }
-  }
+  }, [session, context])
 
-  useEffect(() => { fetchRepos() }, [])
+  // Fetch orgs list once
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      try {
+        const res = await fetch('/api/orgs')
+        const data = await res.json()
+        if (data.orgs) setOrgs(data.orgs)
+      } catch {
+        // orgs are optional — fail silently
+      }
+    }
+    fetchOrgs()
+  }, [])
+
+  // Fetch repos whenever context changes
+  useEffect(() => {
+    if (!context) return
+    const fetchRepos = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const url = context.type === 'org'
+          ? `/api/repos/org?org=${context.login}`
+          : '/api/repos'
+        const res = await fetch(url)
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        setRepos(data.repos)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load repos')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchRepos()
+  }, [context])
+
+  const switchContext = (newContext: Context) => {
+    setContext(newContext)
+    setShowOrgMenu(false)
+  }
 
   return (
     <div className="min-h-screen p-8" style={{ background: 'var(--bg)' }}>
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
-              {session?.user?.name ?? 'Dashboard'}
-            </h1>
+            {/* Org switcher */}
+            <div className="relative">
+              <button
+                onClick={() => setShowOrgMenu(!showOrgMenu)}
+                className="flex items-center gap-2 text-2xl font-bold"
+                style={{ color: 'var(--text-1)' }}
+              >
+                {context?.login ?? session?.user?.name ?? 'Dashboard'}
+                {orgs.length > 0 && (
+                  <ChevronDown
+                    size={18}
+                    style={{
+                      color: 'var(--text-3)',
+                      transform: showOrgMenu ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s',
+                    }}
+                  />
+                )}
+              </button>
+
+              {showOrgMenu && (
+                <div
+                  className="absolute left-0 top-full z-10 mt-1 w-56 overflow-hidden rounded-xl"
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  {/* Personal account */}
+                  <button
+                    onClick={() =>
+                      switchContext({
+                        type: 'user',
+                        login: session?.user?.username ?? '',
+                      })
+                    }
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition-all hover:opacity-80"
+                    style={{
+                      color: context?.type === 'user' ? 'var(--accent)' : 'var(--text-1)',
+                      background: context?.type === 'user' ? 'var(--accent-dim)' : 'transparent',
+                    }}
+                  >
+                    <Globe size={13} />
+                    {session?.user?.username}
+                    <span className="mono ml-auto text-xs" style={{ color: 'var(--text-3)' }}>
+                      personal
+                    </span>
+                  </button>
+
+                  {/* Orgs */}
+                  {orgs.map((org) => (
+                    <button
+                      key={org.id}
+                      onClick={() =>
+                        switchContext({ type: 'org', login: org.login })
+                      }
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition-all hover:opacity-80"
+                      style={{
+                        color: context?.login === org.login ? 'var(--accent)' : 'var(--text-1)',
+                        background: context?.login === org.login ? 'var(--accent-dim)' : 'transparent',
+                      }}
+                    >
+                      <Lock size={13} />
+                      {org.login}
+                      <span className="mono ml-auto text-xs" style={{ color: 'var(--text-3)' }}>
+                        org
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <p className="mono mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
               {repos.length} repos
             </p>
           </div>
+
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard/settings"
@@ -87,7 +200,7 @@ export default function DashboardPage() {
             {repos.map((repo) => (
               <Link
                 key={repo.id}
-                href={`/dashboard/${repo.name}`}
+                href={`/dashboard/${repo.name}?owner=${context?.login}`}
                 className="block rounded-xl p-4 transition-all hover:border-white/10"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
               >
