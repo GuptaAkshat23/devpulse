@@ -4,13 +4,20 @@ import { getGitHubAccessToken } from '@/lib/get-access-token'
 import { getPRDiff, formatDiffForAI } from '@/lib/github-diff'
 import { generateText } from 'ai'
 import { createGroq } from '@ai-sdk/groq'
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limit'
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 })
+  }
+
+  const { allowed } = await checkRateLimit(`ai-review:${session.user.id}`)
+  if (!allowed) {
+    return new Response('Too many requests', { status: 429 })
   }
 
   const body = await req.json()
