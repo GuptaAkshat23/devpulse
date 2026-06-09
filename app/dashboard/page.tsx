@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import { GitFork, Star, Lock, Globe, Loader2, ChevronDown } from 'lucide-react'
 import { GitHubRepo } from '@/lib/github-repos'
@@ -17,17 +17,19 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const [repos, setRepos] = useState<GitHubRepo[]>([])
   const [orgs, setOrgs] = useState<GitHubOrg[]>([])
-  const [context, setContext] = useState<Context | null>(null)
+  const [context, setContext] = useState<Context | null>(() => null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showOrgMenu, setShowOrgMenu] = useState(false)
 
   // Set default context once session loads
+  const hasSetContext = useRef(false)
   useEffect(() => {
-    if (session?.user?.username && !context) {
+    if (session?.user?.username && !hasSetContext.current) {
+      hasSetContext.current = true
       setContext({ type: 'user', login: session.user.username })
     }
-  }, [session, context])
+  }, [session])
 
   // Fetch orgs list once
   useEffect(() => {

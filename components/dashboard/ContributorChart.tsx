@@ -12,7 +12,12 @@ import {
 } from 'recharts'
 import { ContributorStat } from '@/lib/pr-metrics'
 
-function CustomTooltip({ active, payload, label }: any) {
+interface TooltipProps {
+  active?: boolean
+  payload?: Array<{ name: string; value: number; color: string }>
+  label?: string
+}
+function CustomTooltip({ active, payload, label }: TooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div
@@ -26,7 +31,7 @@ function CustomTooltip({ active, payload, label }: any) {
       <div className="mono mb-1" style={{ color: 'var(--text-3)' }}>
         {label}
       </div>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <div key={p.name} style={{ color: p.color }}>
           {p.name}: {p.value}
         </div>
